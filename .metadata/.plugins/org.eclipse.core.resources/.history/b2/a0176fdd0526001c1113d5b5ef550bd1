@@ -1,0 +1,619 @@
+/**
+ * @param {nlobjRequest} request Request object
+ * @param {nlobjResponse} response Response object
+ * @returns {Void} Any output is written via response object
+ */
+
+ define(['N/record', 
+        'N/search', 
+        '../Lodash/Lodash', 
+        '../Config/Environment'],
+
+ /** name, type, description of a function parameter.
+   * 
+   * @param {*} record_type transferInput
+   * @param {*} id 
+   * @returns {*} objReturn for Dilogin Input
+   */
+ function (Record, search, Lo, Env) {
+     const account = Env.get('accountingAccounts.account421003000');
+     function processRebate(purchaseOrder, status) {//Constructor Function that calls the another functions
+         try {
+             switch (status) {
+                 case "B":
+                     var listvendorCredits = searchVendorCredit(purchaseOrder.getValue('entity'), purchaseOrder.getValue('id'));
+                     if (listvendorCredits.length == 0) {
+                         createVendorCredit(purchaseOrder);
+                     }else{
+                         log.debug('Lista de vendors credits', listvendorCredits);
+                     }
+                     break;
+                 case "C":
+                     cancelVendorCredit(purchaseOrder);
+                     Pending_State(Record,id);
+                     break;
+                 default:
+                     log.debug("Status procesado", status);
+                     break;
+             }
+         } catch (error) {
+             log.error('Error RebatePurchaseOrder.processRebate', error);
+         }
+     }//End Status Function
+
+     function createVendorCredit(purchaseOrder) {
+         try {
+             var idPurchaseOrder = purchaseOrder.getValue('id');
+
+             var listRebateVendor = searchRebateVendor(purchaseOrder.getValue('entity'), idPurchaseOrder);
+
+             listRebateVendor.forEach(function (rebateVendor) {
+                 var recObj = Record.create({
+                     type: 'vendorcredit',
+                 });
+                 var totalRebate = (parseFloat(purchaseOrder.getValue('total')) * parseFloat(rebateVendor.percentag)) / 100;
+                 log.debug("internalId", idPurchaseOrder);
+                 log.debug("createVendorCredit rebateVendor", rebateVendor);
+                 var referenceNo = 'COMNC-' + purchaseOrder.getValue('tranid');
+                 if (rebateVendor.concept == 'MKT') {
+                     referenceNo = 'MKTNC-' + purchaseOrder.getValue('tranid');
+                 }
+
+                 recObj.setValue({ fieldId: 'entity', value: purchaseOrder.getValue('entity') });
+                 recObj.setValue({ fieldId: 'custbody24', value: parseInt(idPurchaseOrder) });
+                 recObj.setValue({ fieldId: 'tranid', value: referenceNo });
+
+                 recObj.setSublistValue({
+                     sublistId: 'expense',
+                     fieldId: 'account',
+                     line: 0,
+                     value: account // ACTUALIZAR POR ID CORRECTO 1988
+                 });
+
+                 recObj.setSublistValue({
+                     sublistId: 'expense',
+                     fieldId: 'amount',
+                     line: 0,
+                     value: totalRebate
+                 });
+
+                 recObj.setSublistValue({
+                     sublistId: 'expense',
+                     fieldId: 'memo',
+                     line: 0,
+                     value: "Comisión del " + rebateVendor.percentag + " para " + rebateVendor.concept + " de la purchase orden #" + purchaseOrder.getValue('tranid')
+                 });
+
+                 var savedRecord = recObj.save();
+
+                 if (!Lo.has(savedRecord, 'cause')) {
+                     log.audit('SUCCESS: Se ha generado Vendor Credit: ', savedRecord);
+                 } else {
+                     log.error('ERROR Module Function: RebatePurchaseOrder.createVendorCredit ', 'Excepción en la creación de Vendor Credit: ' + JSON.stringify(savedRecord, null, 2));
+                 }
+             });
+         } catch (error) {
+             log.error('Error RebatePurchaseOrder.createVendorCredit', error);
+         }
+     }//End Create Vendor For Status
+
+     function cancelVendorCredit(purchaseOrder) {
+         try {
+
+             var listvendorCredits = searchVendorCredit(purchaseOrder.getValue('entity'), purchaseOrder.getValue('id'));
+             var listRebateVendor = searchRebateVendor(purchaseOrder.getValue('entity'), purchaseOrder.getValue('id'));
+
+             if (listRebateVendor.length > 0) {//if Vendors hasn´t got any rebate
+                 if (listvendorCredits.length > 0) {// if Vendors has credits
+                     listvendorCredits.forEach(function (vendorCredit) {
+                         var objRecordVC = Record.load({
+                             type: "vendorcredit",
+                             id: vendorCredit.internalid
+                         });
+                             objRecordVC.setSublistValue({
+                             sublistId: 'expense',
+                             fieldId: 'amount',
+                             line: 0,
+                             value: .00
+                         });
+                         var recordSave = objRecordVC.save();
+                         log.debug("Cancel Vendor Credit " + vendorCredit.internalid, recordSave);
+                     });
+                 }
+             }
+         } catch (error) {
+             log.error('Error RebatePurchaseOrder.cancelVendorCredit', error);
+         }
+     }//End Cancel Vendor For Status
+
+     function searchRebateVendor(vendorId, POId) {
+         var rebatesVendor = [];
+         try {
+             var SearchObj = search.create({
+                 type: "customrecord_comission_by_vendor",
+                 filters:
+                     [
+                         ['custrecord_comission_by_vendor_id', 'isempty', ''], 'AND', ['custrecord_po_id', 'is', POId],'AND',['isinactive', 'is', 'false']
+                     ],
+                 columns:
+                     [
+                         { name: 'custrecord_comission_by_vendor_percentag' },
+                         { name: 'custrecord_comission_by_vendor_concept' },
+                         { name: 'custrecord_comission_by_vendor_id' },
+                     ]
+             });
+             var resultCount = SearchObj.runPaged().count;
+             if (resultCount == 0) {
+                 SearchObj = search.create({
+                     type: "customrecord_comission_by_vendor",
+                     filters:
+                         [
+                             ['custrecord_comission_by_vendor_id', 'is', vendorId], 'AND', ['custrecord_po_id', 'isempty', ''],'AND',['isinactive', 'is', 'false']
+                         ],
+                     columns:
+                         [
+                             { name: 'custrecord_comission_by_vendor_percentag' },
+                             { name: 'custrecord_comission_by_vendor_concept' },
+                             { name: 'custrecord_comission_by_vendor_id' },
+                         ]
+                 });
+             }
+
+             SearchObj.run().each(function (result) {
+                 rebatesVendor.push({
+                     percentag: result.getValue('custrecord_comission_by_vendor_percentag'),
+                     concept: result.getText('custrecord_comission_by_vendor_concept'),
+                     vendor_id: result.getValue('custrecord_comission_by_vendor_id')
+                 });
+                 return true;
+             });
+         } catch (error) {
+             log.error('Error RebatePurchaseOrder.searchRebateVendor', error);
+         }
+         return rebatesVendor;
+     }//End searchRebateVendor For Status
+
+     function searchVendorCredit(entity, idPurchaseOrder) {
+         var vendorCredits = [];
+         try {
+             var SearchObj = search.create({
+                 type: "vendorcredit",
+                 filters:
+                     [
+                         ['entity', 'is', entity], 'AND',
+                         ['custbody24', 'is', idPurchaseOrder], 'AND',
+                         ['account', 'is', account], 'AND',
+                         ['amount', 'greaterthan', 0]
+                     ],
+                 columns:
+                     [
+                         { name: 'amount' },
+                         { name: 'account' },
+                         { name: 'internalid' },
+                     ]
+             });
+             SearchObj.run().each(function (result) {
+                 vendorCredits.push({
+                     amount: result.getValue('amount'),
+                     account: result.getValue('account'),
+                     internalid: result.getValue('internalid')
+                 });
+                 return true;
+             });
+         } catch (error) {
+             log.error('Error RebatePurchaseOrder.searchVendorCredit', error);
+         }
+         return vendorCredits;
+     }//End searchVendorCredit For Status
+     return {
+         processRebate: processRebate
+     }
+
+   /**
+   * 
+   * @param {*} record_type 
+   * @param {*} id 
+   * @returns {*} objReturn for Dilogin Input
+   */
+    function inputDto(record_type,id){
+      var isError = false;
+      var msg = 'Msg Default [7]';
+      var items = [];
+      var wmsDto = {};
+      var objReturn = {};
+      //Para el purchase order estatus Pending Receipt
+      try{
+        var filters = [];
+        filters.push({name:"internalid", operator:"is", values:id});
+        filters.push({name:"itemtype", operator:"is", values:['InvtPart','Kit']});
+        
+        //log.debug("record_type",record_type);
+        if(record_type == 'purchaseorder'){
+          //filters.push({name:"status", operator:"is", values:"pendingReceipt"});
+          filters.push({name:"status", operator:"anyof", values:"PurchOrd:B"});
+        }
+        
+        //log.debug("filters",filters);
+        var searchInput = search.create({
+          type: record_type,
+            filters: filters,
+            columns : [
+              //{ name: 'status'},
+                { name: 'internalid'},
+                {name: "custbody11"},//Fecha Entrega
+                { name: 'internalid',join:'vendor'},
+                { name: 'internalid',join:'customer'},
+                { name: 'location'},
+                { name: 'custbody_consignacion'},
+                { name: 'custbody_amazon_smec'},
+                { name: 'custbody_response_dilogin_input'},
+                { name: 'item'},
+                { name: 'itemtype'},
+                { name: 'quantity'},
+                { name: 'upccode', join: 'item'},
+                { name: 'custitem1', join: 'item'}, //idVertical
+                { name: "custitem_talla", join : "item"},
+                { name: 'custitem_color', join: 'item'},
+                { name: 'custitem13', join: 'item'}, //Modelo
+                { name: 'custbody_quality_status'},
+            ]
+        });
+        var countItem = 0;
+          searchInput.run().each(function (result) {
+            //log.debug("status",result.getValue({ name: 'status'}));
+
+            var item={};
+            /*            
+            if(result.getValue({ name: 'custbody_response_dilogin_input'}) != ''){
+              isError = true;
+              msg = 'Dilogin realizado previamente';
+            }
+            */
+           /*
+            var fechaEntrega = result.getValue({name: "custbody11"});
+            if(fechaEntrega == null || fechaEntrega == ''){
+              wmsDto.fechaEntrega = moment(today, "DD/MM/YYYY");
+              wmsDto.fechaEntrega = wmsDto.fechaEntrega.format("DD/MM/YYYY");
+            }
+            else{
+              wmsDto.fechaEntrega = fechaEntrega;
+            }
+            */
+            wmsDto.fechaEntrega = moment(today, "DD/MM/YYYY");
+            wmsDto.fechaEntrega = wmsDto.fechaEntrega.format("DD/MM/YYYY");
+
+            wmsDto.idOdc = id;
+            wmsDto.idAlmacen = result.getValue({name: 'location'});
+            wmsDto.idProveedor = 0;
+            switch (record_type) {
+              case 'purchaseorder':
+                wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'vendor'});
+                break;
+              case 'returnauthorization':
+                wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'customer'});
+                break;
+            }
+            //log.debug("wmsDto.idProveedor",wmsDto.idProveedor)
+            if(result.getValue({name: "custbody_amazon_smec"}) == true ){
+              wmsDto.idAlmacen = 15;
+            }
+
+            wmsDto.tipoOdc = 'Firme';
+            if(record_type == 'purchaseorder')
+            {
+              if(result.getValue({name: "custbody_consignacion"}) == true ){
+                wmsDto.tipoOdc = 'Consigna';
+              }
+            }
+            
+
+            wmsDto.idSeller = '';
+            wmsDto.sellerName = '';
+            countItem += 1;
+            item.atributo = 'Talla: ' + result.getValue({name: "custitem_talla", join : "item"}) + ' Color: ' + result.getValue({name: "custitem_color", join : "item"});
+            item.cantidad = Math.abs(parseInt(result.getValue({name: "quantity"})));
+            item.descripcion = result.getText({name: "item"});
+            item.descripcion = item.descripcion.replace(/[^a-zA-Z 0-9.]+/g, '');        
+            item.ean = result.getValue({ name: 'upccode', join: 'item'});
+            item.idVertical = 0;
+            if(result.getValue({ name: 'custitem1', join: 'item'}).length > 0){
+              item.idVertical = result.getValue({ name: 'custitem1', join: 'item'});
+            }
+            item.idWb = countItem;
+            item.modelo = result.getValue({ name: 'custitem13', join: 'item'});
+            item.sku = result.getValue({ name: 'upccode', join: 'item'});
+            item.validaSerie = "0";
+            item.imagen = "";
+            item.publication = "";
+            item.validaCaducidad = "";
+            item.edoCal = result.getText({ name: 'custbody_quality_status'});
+            items.push(item);
+            if(item.edoCal == ''){
+              isError = true;
+              msg = "Completar campo Estado Calidad WMS";
+            }
+            return true;
+          });
+          wmsDto.listProducto = items;
+          wmsDto = JSON.stringify(wmsDto);
+
+          if(countItem == 0){
+            isError = true;
+            msg = "Sin Items para Dilogin";
+          }
+      }
+      catch(error){
+        log.error('Dilogin inputDto',error);
+        isError = true;
+        msg = 'Internal Error GetDto ' + record_type + ' Id: '  + id;
+      }
+      objReturn.isError = isError;
+      objReturn.msg = msg;
+      objReturn.wmsDto = wmsDto;
+      objReturn = JSON.stringify(objReturn);
+      return objReturn;
+    }
+
+
+        /**
+   * 
+   * @param {*} record_type 
+   * @param {*} id 
+   * @returns {*} objReturn for Dilogin Input
+   */
+         function inputDto(record_type,id){
+            var isError = false;
+            var msg = 'Msg Default [7]';
+            var items = [];
+            var wmsDto = {};
+            var objReturn = {};
+            try{//Para el purchase order estatus Pending Receipt
+              var filters = [];
+              filters.push({name:"internalid", 
+                            operator:"is", 
+                            values:id});
+              filters.push({name:"itemtype", 
+                            operator:"is", 
+                            values:['InvtPart','Kit']});
+              
+              if(record_type == 'purchaseorder'){
+                filters.push({name:"status", operator:"anyof", values:"PurchOrd:B"});
+              }
+              
+              var searchInput = search.create({
+                  type: record_type,
+                  filters: filters,
+                  columns : [
+                    //{ name: 'status'},
+                      { name: 'internalid'},
+                      {name: "custbody11"},//Fecha Entrega
+                      { name: 'internalid',join:'vendor'},
+                      { name: 'internalid',join:'customer'},
+                      { name: 'location'},
+                      { name: 'custbody_consignacion'},
+                      { name: 'custbody_amazon_smec'},
+                      { name: 'custbody_response_dilogin_input'},
+                      { name: 'item'},
+                      { name: 'itemtype'},
+                      { name: 'quantity'},
+                      { name: 'upccode', join: 'item'},
+                      { name: 'custitem1', join: 'item'}, //idVertical
+                      { name: "custitem_talla", join : "item"},
+                      { name: 'custitem_color', join: 'item'},
+                      { name: 'custitem13', join: 'item'}, //Modelo
+                      { name: 'custbody_quality_status'},
+                  ]
+              });
+              var countItem = 0;
+                searchInput.run().each(function (result) {
+                  var item={};
+                  wmsDto.fechaEntrega = moment(today, "DD/MM/YYYY");
+                  wmsDto.fechaEntrega = wmsDto.fechaEntrega.format("DD/MM/YYYY");
+      
+                  wmsDto.idOdc = id;
+                  wmsDto.idAlmacen = result.getValue({name: 'location'});
+                  wmsDto.idProveedor = 0;
+                  switch (record_type) {
+                    case 'purchaseorder':
+                      wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'vendor'});
+                      break;
+                    case 'returnauthorization':
+                      wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'customer'});
+                      break;
+                  }
+                  //log.debug("wmsDto.idProveedor",wmsDto.idProveedor)
+                  if(result.getValue({name: "custbody_amazon_smec"}) == true ){
+                    wmsDto.idAlmacen = 15;
+                  }
+      
+                  wmsDto.tipoOdc = 'Firme';
+                  if(record_type == 'purchaseorder')
+                  {
+                    if(result.getValue({name: "custbody_consignacion"}) == true ){
+                      wmsDto.tipoOdc = 'Consigna';
+                    }
+                  }
+                  
+                  wmsDto.idSeller = '';
+                  wmsDto.sellerName = '';
+                  countItem += 1;
+                  item.atributo = 'Talla: ' + result.getValue({name: "custitem_talla", join : "item"}) + ' Color: ' + result.getValue({name: "custitem_color", join : "item"});
+                  item.cantidad = Math.abs(parseInt(result.getValue({name: "quantity"})));
+                  item.descripcion = result.getText({name: "item"});
+                  item.descripcion = item.descripcion.replace(/[^a-zA-Z 0-9.]+/g, '');        
+                  item.ean = result.getValue({ name: 'upccode', join: 'item'});
+                  item.idVertical = 0;
+                  if(result.getValue({ name: 'custitem1', join: 'item'}).length > 0){
+                    item.idVertical = result.getValue({ name: 'custitem1', join: 'item'});
+                  }
+                  item.idWb = countItem;
+                  item.modelo = result.getValue({ name: 'custitem13', join: 'item'});
+                  item.sku = result.getValue({ name: 'upccode', join: 'item'});
+                  item.validaSerie = "0";
+                  item.imagen = "";
+                  item.publication = "";
+                  item.validaCaducidad = "";
+                  item.edoCal = result.getText({ name: 'custbody_quality_status'});
+                  items.push(item);
+                  if(item.edoCal == ''){
+                    isError = true;
+                    msg = "Completar campo Estado Calidad WMS";
+                  }
+                  return true;
+                });
+                wmsDto.listProducto = items;
+                wmsDto = JSON.stringify(wmsDto);
+      
+                if(countItem == 0){
+                  isError = true;
+                  msg = "Sin Items para Dilogin";
+                }
+            }
+            catch(error){
+              log.error('Dilogin inputDto',error);
+              isError = true;
+              msg = 'Internal Error GetDto ' + record_type + ' Id: '  + id;
+            }
+            objReturn.isError = isError;
+            objReturn.msg = msg;
+            objReturn.wmsDto = wmsDto;
+            objReturn = JSON.stringify(objReturn);
+            return objReturn;
+          }
+
+   /**
+   * 
+   * @param {*} record_type transferInput
+   * @param {*} id 
+   * @returns {*} objReturn for Dilogin Input
+   */
+
+     function Pending_State(record_type,id){//Pending_State
+        var isError = false;
+        var msg = 'Msg Default [7]';
+        var items = [];
+        var wmsDto = {};
+        var objReturn = {};
+        try{//Para el purchase order estatus Pending Receipt
+          var filters = [];
+          filters.push({name:"internalid",
+                        operator:"is", 
+                        values:id});
+          filters.push({name:"itemtype", 
+                        operator:"is", 
+                        values:['InvtPart','Kit']});
+          if(record_type == 'purchaseorder'){//Si el registro es del tipo purchaseorder
+            filters.push({name:"status", 
+            operator:"anyof", 
+            values:"PurchOrd:B"});
+            }
+          var searchInput = search.create({
+            type: record_type,
+              filters: filters,
+              columns : [
+                  { name: 'status'},
+                  { name: 'internalid'},
+                  {name: "custbody11"},//Fecha Entrega
+                  { name: 'internalid',join:'vendor'},
+                  { name: 'internalid',join:'customer'},
+                  { name: 'location'},
+                  { name: 'custbody_consignacion'},
+                  { name: 'custbody_amazon_smec'},
+                  { name: 'custbody_response_dilogin_input'},
+                  { name: 'item'},
+                  { name: 'itemtype'},
+                  { name: 'quantity'},
+                  { name: 'upccode', join: 'item'},
+                  { name: 'custitem1', join: 'item'}, //idVertical
+                  { name: "custitem_talla", join : "item"},
+                  { name: 'custitem_color', join: 'item'},
+                  { name: 'custitem13', join: 'item'}, //Modelo
+                  { name: 'custbody_quality_status'},
+              ]
+          });
+          var countItem = 0;
+            searchInput.run().each(function (result) {
+              var item={};
+              wmsDto.fechaEntrega = moment(today, "DD/MM/YYYY");
+              wmsDto.fechaEntrega = wmsDto.fechaEntrega.format("DD/MM/YYYY");
+    
+              wmsDto.idOdc = id;
+              wmsDto.idAlmacen = result.getValue({name: 'location'});
+              wmsDto.idProveedor = 0;
+              switch (record_type) {
+                case 'purchaseorder':
+                  wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'vendor'});
+                  break;
+                case 'returnauthorization':
+                  wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'customer'});
+                  break;
+              }
+              if(result.getValue({name: "custbody_amazon_smec"}) == true ){
+                wmsDto.idAlmacen = 15;
+              }
+    
+              wmsDto.tipoOdc = 'Firme';
+              if(record_type == 'purchaseorder')
+              {
+                if(result.getValue({name: "custbody_consignacion"}) == true ){
+                  wmsDto.tipoOdc = 'Consigna';
+                }
+              }
+    
+              wmsDto.idSeller = '';
+              wmsDto.sellerName = '';
+              countItem += 1;
+              item.atributo = 'Talla: ' + result.getValue({name: "custitem_talla", join : "item"}) + ' Color: ' + result.getValue({name: "custitem_color", join : "item"});
+              item.cantidad = Math.abs(parseInt(result.getValue({name: "quantity"})));
+              item.descripcion = result.getText({name: "item"});
+              item.descripcion = item.descripcion.replace(/[^a-zA-Z 0-9.]+/g, '');        
+              item.ean = result.getValue({ name: 'upccode', join: 'item'});
+              item.idVertical = 0;
+              if(result.getValue({ name: 'custitem1', join: 'item'}).length > 0){
+                item.idVertical = result.getValue({ name: 'custitem1', join: 'item'});
+              }
+              item.idWb = countItem;
+              item.modelo = result.getValue({ name: 'custitem13', join: 'item'});
+              item.sku = result.getValue({ name: 'upccode', join: 'item'});
+              item.validaSerie = "0";
+              item.imagen = "";
+              item.publication = "";
+              item.validaCaducidad = "";
+              item.edoCal = result.getText({ name: 'custbody_quality_status'});
+              items.push(item);
+              if(item.edoCal == ''){
+                isError = true;
+                msg = "Completar campo Estado Calidad WMS";
+              }
+              return true;
+            });
+            wmsDto.listProducto = items;
+            wmsDto = JSON.stringify(wmsDto);
+    
+            if(countItem == 0){
+              isError = true;
+              msg = "Sin Items para Dilogin";
+            }
+        }
+        catch(error){
+          log.error('Dilogin Pending_State',error);
+          isError = true;
+          msg = 'Internal Error GetDto ' + record_type + ' Id: '  + id;
+        }
+
+        return {
+            transfer:transfer,
+            output:output,
+            input:input,
+            inputDto:inputDto,
+            msgTest:msgTest
+          };
+      }//End Pending_state For Status
+
+      objReturn.msg = msg;//Pending State
+      objReturn.wmsDto = wmsDto;
+      objReturn.isError = isError;
+      objReturn = JSON.stringify(objReturn);
+      return objReturn;
+ });
+

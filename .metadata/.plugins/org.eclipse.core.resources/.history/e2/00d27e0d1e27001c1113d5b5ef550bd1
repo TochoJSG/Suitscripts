@@ -1,0 +1,46 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType Suitelet
+ * @NModuleScope SameAccount
+ */
+define(['./JorgeLibreria'],
+function(purchaseorder){		
+	/**
+     * @param {Object} context
+     * @param {ServerRequest} context.request - Encapsulation of the incoming request
+     * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
+     * @Since 2015.2
+     */
+	function onRequest(context){
+		/*
+	    var PurchaseOrderTest = purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);*/
+		
+		var PurchaseOrderTest = purchaseorder.menuPurchase("a");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);
+		
+		
+		/*var PurchaseOrderTest = purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);
+	    
+	    var PurchaseOrderTest = purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);
+	    
+	    var PurchaseOrderTest = purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);
+	    
+	    var PurchaseOrderTest = purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);
+	    
+	    var PurchaseOrderTest = purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    log.debug("Log PurchaseOrderTest",PurchaseOrderTest);
+	    context.response.write(PurchaseOrderTest);*/
+	}
+	return {onRequest:onRequest};
+});  

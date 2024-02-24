@@ -1,0 +1,28 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType Suitelet
+ * @NModuleScope SameAccount
+ */
+define(['./JorgeLibreria'],
+function(purchaseorder){		
+	/**
+     * @param {Object} context
+     * @param {ServerRequest} context.request - Encapsulation of the incoming request
+     * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
+     * @Since 2015.2
+     */
+	function onRequest(context){
+		/*log.debug("Log Title","Log MSG");
+		log.error("Log Title","Log MSG");
+		var x = hiIbushak(); */
+	    var PurchaseOrderTest = JSON.purchaseorder.getPurchaseStatus("02/07/2021","05/10/2021");
+	    
+	    log.debug("Log Title",PurchaseOrderTest);
+	    log.error("Log Title",PurchaseOrderTest);
+	    context.response.write(json.parse(PurchaseOrderTest));
+	}
+	/*function hiIbushak(){
+		return "Hola Ibushak";
+	} */
+	return {onRequest:onRequest};
+});  

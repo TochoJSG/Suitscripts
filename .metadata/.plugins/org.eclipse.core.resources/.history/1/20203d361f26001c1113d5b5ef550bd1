@@ -1,0 +1,164 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType Suitelet
+ */
+define(['N/search'],
+function(n_search) {
+    /**
+      * @param {Object} context
+      * @param {ServerRequest} context.request 
+      * @param {ServerResponse} context.response 
+      */
+function PurchaseTest(recordPurchase){
+     function getPurchaseStatus(beginP,endP){
+         try{
+             var searchContext = recordPurchase.create({
+                 type:'purchaseorder',
+                 filters: [{
+                       name:'trandate',
+                       operator:'WITHIN',
+                       values: [beginP, endP]	}],
+                 columns : [
+                        { name:'trandate'},
+                        { name:'internalid'},
+                        { name:'item'},
+                        { name:'tranid' },
+                        { name:'statusref'},
+                        { name:'internalid',join:'vendor'}]
+             });
+             var purchaseOrder = [];
+             searchContext.run().each(function (result) {
+                 var jsonData = {};
+	                 jsonData.internalid = result.values.internalid[0].value;
+	                 jsonData.tranid = result.values.tranid;
+	                 jsonData.stauts = result.values.status[0].value;
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+               });
+             return purchaseOrder;
+         }catch(error){
+             log.error('Was an Error',error);
+         }
+     }
+	}
+    return {   onRequest: onRequest    };
+});
+
+  /*
+   * 
+   * @param {*} record_type transferInput
+   * @param {*} id 
+   * @returns {*} objReturn for Dilogin Input
+   *
+   function Pending_State(record_type,id){//Pending_State
+    var isError = false;
+    var msg = 'Msg Default [7]';
+    var items = [];
+    var wmsDto = {};
+    var objReturn = {};
+    try{//Para el purchase order estatus Pending Receipt
+      var filters = [];
+      filters.push({name:"internalid",
+                    operator:"is", 
+                    values:id});
+      filters.push({name:"itemtype", 
+                    operator:"is", 
+                    values:['InvtPart','Kit']});
+      if(record_type == 'purchaseorder'){//Si el registro es del tipo purchaseorder
+        filters.push({name:"status", 
+        operator:"anyof", 
+        values:"PurchOrd:B"});
+        }
+      var searchInput = search.create({
+        type: record_type,
+          filters: filters,
+          columns : [
+              { name: 'status'},
+              { name: 'internalid'},
+              {name: "custbody11"},//Fecha Entrega
+              { name: 'internalid',join:'vendor'},
+              { name: 'internalid',join:'customer'},
+              { name: 'location'},
+              { name: 'custbody_consignacion'},
+              { name: 'custbody_amazon_smec'},
+              { name: 'custbody_response_dilogin_input'},
+              { name: 'item'},
+              { name: 'itemtype'},
+              { name: 'quantity'},
+              { name: 'upccode', join: 'item'},
+              { name: 'custitem1', join: 'item'}, //idVertical
+              { name: "custitem_talla", join : "item"},
+              { name: 'custitem_color', join: 'item'},
+              { name: 'custitem13', join: 'item'}, //Modelo
+              { name: 'custbody_quality_status'},
+          ]
+      });
+      var countItem = 0;
+        searchInput.run().each(function (result) {
+          var item={};
+          wmsDto.fechaEntrega = moment(today, "DD/MM/YYYY");
+          wmsDto.fechaEntrega = wmsDto.fechaEntrega.format("DD/MM/YYYY");
+
+          wmsDto.idOdc = id;
+          wmsDto.idAlmacen = result.getValue({name: 'location'});
+          wmsDto.idProveedor = 0;
+          switch (record_type) {
+            case 'purchaseorder':
+              wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'vendor'});
+              break;
+            case 'returnauthorization':
+              wmsDto.idProveedor = result.getValue({ name: 'internalid',join:'customer'});
+              break;
+          }
+          if(result.getValue({name: "custbody_amazon_smec"}) == true ){
+            wmsDto.idAlmacen = 15;
+          }
+
+          wmsDto.tipoOdc = 'Firme';
+          if(record_type == 'purchaseorder')
+          {
+            if(result.getValue({name: "custbody_consignacion"}) == true ){
+              wmsDto.tipoOdc = 'Consigna';
+            }
+          }
+
+          wmsDto.idSeller = '';
+          wmsDto.sellerName = '';
+          countItem += 1;
+          item.atributo = 'Talla: ' + result.getValue({name: "custitem_talla", join : "item"}) + ' Color: ' + result.getValue({name: "custitem_color", join : "item"});
+          item.cantidad = Math.abs(parseInt(result.getValue({name: "quantity"})));
+          item.descripcion = result.getText({name: "item"});
+          item.descripcion = item.descripcion.replace(/[^a-zA-Z 0-9.]+/g, '');        
+          item.ean = result.getValue({ name: 'upccode', join: 'item'});
+          item.idVertical = 0;
+          if(result.getValue({ name: 'custitem1', join: 'item'}).length > 0){
+            item.idVertical = result.getValue({ name: 'custitem1', join: 'item'});
+          }
+          item.idWb = countItem;
+          item.modelo = result.getValue({ name: 'custitem13', join: 'item'});
+          item.sku = result.getValue({ name: 'upccode', join: 'item'});
+          item.validaSerie = "0";
+          item.imagen = "";
+          item.publication = "";
+          item.validaCaducidad = "";
+          item.edoCal = result.getText({ name: 'custbody_quality_status'});
+          items.push(item);
+          if(item.edoCal == ''){
+            isError = true;
+            msg = "Completar campo Estado Calidad WMS";
+          }
+          return true;
+        });
+        wmsDto.listProducto = items;
+        wmsDto = JSON.stringify(wmsDto);
+
+        if(countItem == 0){
+          isError = true;
+          msg = "Sin Items para Dilogin";
+        }
+    }
+    catch(error){
+      log.error('Dilogin Pending_State',error);
+      isError = true;
+      msg = 'Internal Error GetDto ' + record_type + ' Id: '  + id;
+    }*/

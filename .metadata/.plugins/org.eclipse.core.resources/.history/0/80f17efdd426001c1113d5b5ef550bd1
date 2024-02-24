@@ -1,0 +1,36 @@
+/**
+ @NApiVersion 2.x
+ */
+define([
+    '../Lib/Extends/Search',], 
+function (Search) {
+    /**
+     * @search
+     * @credit_10
+     * @returns {Array<Collection>}
+     */
+    function operationStatuses() {
+        var searchObj = Search.create({
+            type: "purchaseorder",
+            filters: [
+                {name:'tranid'},
+                {name:'itemid'},
+                {name:'status'},
+                {name:'tranid'},
+            ],
+            columns: [
+                { name: "internalid" },
+                { name: "name" },
+            ]
+        });
+        var collection = [];
+        searchObj.run().each(function(result) {
+            var item ={};
+            item.internalId = result.getValue({ name: "internalid" });
+            item.internalId = result.getValue({ name: "name" });
+            return true;
+        });
+        return collection;
+    };
+            return {operationStatuses:operationStatuses};
+        });

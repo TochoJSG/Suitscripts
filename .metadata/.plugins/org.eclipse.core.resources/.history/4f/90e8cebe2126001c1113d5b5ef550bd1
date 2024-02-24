@@ -1,0 +1,29 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType Suitelet
+ * @NModuleScope SameAccount
+ */
+define(['./LibPurJSG.js'], 
+function(SalesOrder) {
+    /**
+     *
+     * @param {Object} context
+     * @param {ServerRequest} context.request   Encapsulation of the incoming request
+     * @param {ServerResponse} context.response Encapsulation of the Suitelet response
+     */
+    function onRequest(contexto){
+       var purchaseByDate = purchase.getPurchaseStatus("03/03/2021","05/10/2021");
+       var th_pur = [];
+       purchaseByDate.map(function(result) {
+            var purData = {};         
+	            purData.internalid = result.getValue('trandate');
+	            purData.tranid = result.getValue('internalid');
+	            purData.status = result.getValue('item');
+	            purData.total = result.getValue('tranid');
+	            purData.taxtotal = result.getValue('statusref');
+	            th_pur.push(purData);
+       });
+       contexto.response.write(JSON.stringify(th_pur)); 
+    }
+    return {	onRequest: onRequest	};   
+});

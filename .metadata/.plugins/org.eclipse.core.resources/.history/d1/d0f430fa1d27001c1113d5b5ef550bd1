@@ -1,0 +1,161 @@
+/**
+ * @NApiVersion 2.x
+ */
+define(['N/search'],
+function(n_search){
+     /*function getPurchaseStatus(beginP,endP){//Function that filter by Date
+         try{
+             log.debug("FechaIni",beginP);	log.debug("FechaFin",endP);
+             var searchContext = n_search.create({
+                 type:'purchaseorder',
+                 filters: [{name:"status", operator:"anyof", values:"PurchOrd:B"}],
+                 columns : [{ name:'trandate'},{ name:'internalid'}]
+             });
+             var purchaseOrder = [];
+             searchContext.run().each(function (result) {
+            	 log.debug("results",result);
+                 var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.tranid = result.getValue({ name:'trandate'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+               });	return JSON.stringify(purchaseOrder);
+         }catch(error){
+             log.error('Was an Error',error);
+         }
+     }	return {   getPurchaseStatus: getPurchaseStatus    };*/
+	function getPurchaseStatus(status){// 1:Function that filter by Status
+        try{
+            log.debug("Estatus",status);
+            var searchContext = n_search.create({
+                type:'purchaseorder',
+                filters: [{name:"status", operator:"anyof", values:"PurchOrd:B"}],
+                columns : [{ name:'internalid'},{ name:'status'}]
+            });
+            var purchaseOrder = [];
+            searchContext.run().each(function (result) {
+           	 log.debug("results",result);
+                var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.status = result.getValue({ name:'status'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+              });
+            return JSON.stringify(purchaseOrder);
+        }catch(error){
+            log.error('Was an Error',error);
+        }
+        return {   getPurchaseStatus: getPurchaseStatus    };
+    }
+	
+	function getPurchaseId(id){//2:Function that filter by Id
+        try{
+            log.debug("Identificador",id);
+            var searchContext = n_search.create({
+                type:'purchaseorder',
+                filters: [{name:"id", operator:"anyof", values:"PurchOrd:B"}],
+                columns : [{ name:'internalid'},{ name:'trandate'}]
+            });
+            var purchaseOrder = [];
+            searchContext.run().each(function (result) {
+           	 log.debug("results",result);
+                var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.trandate = result.getValue({ name:'trandate'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+              });
+            return JSON.stringify(purchaseOrder);
+        }catch(error){
+            log.error('Was an Error',error);
+        }
+        return {   getPurchaseId: getPurchaseId    };
+    }
+	
+	function getPurchaseShipcountry(shipcountry){//3:Function that filter by shipcountry
+        try{
+            log.debug("Pais de Envio",shipcountry);
+            var searchContext = n_search.create({
+                type:'purchaseorder',
+                filters: [{name:"shipcountry", operator:"anyof", values:"PurchOrd:B"}],
+                columns : [{ name:'internalid'},{ name:'shipcountry'}]
+            });
+            var purchaseOrder = [];
+            searchContext.run().each(function (result) {
+           	 log.debug("results",result);
+                var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.shipcountry = result.getValue({ name:'shipcountry'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+              });
+            return JSON.stringify(purchaseOrder);
+        }catch(error){
+            log.error('Was an Error',error);
+        }
+        return {   getPurchaseShipcountry: getPurchaseShipcountry    };
+    }
+	
+	function getPurchaseShipaddress(shipaddress){//4:Function that filter by shipaddress
+        try{
+            log.debug("Direccion de Envio",shipaddress);
+            var searchContext = n_search.create({
+                type:'purchaseorder',
+                filters: [{name:"shipaddress", operator:"anyof", values:"PurchOrd:B"}],
+                columns : [{ name:'internalid'},{ name:'shipaddress'}]
+            });
+            var purchaseOrder = [];
+            searchContext.run().each(function (result) {
+           	 log.debug("results",result);
+                var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.shipaddress = result.getValue({ name:'shipaddress'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+              });
+            return JSON.stringify(purchaseOrder);
+        }catch(error){
+            log.error('Was an Error',error);
+        }
+        return {   getPurchaseShipaddress: getPurchaseShipaddress    };
+    }
+	
+	function getPurchaseShipdate(shipdate){//5:Function that filter by shipdate
+        try{
+            log.debug("Fecha de Envio",shipdate);
+            var searchContext = n_search.create({
+                type:'purchaseorder',
+                filters: [{ name:"shipdate", operator:"anyof", values: [startDate, endDate] }],
+                columns : [{ name:'internalid'},{ name:'trandate'}]
+            });
+            var purchaseOrder = [];
+            searchContext.run().each(function (result) {
+           	 log.debug("results",result);
+                var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.trandate = result.getValue({ name:'trandate'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+              });
+            return JSON.stringify(purchaseOrder);
+        }catch(error){
+            log.error('Was an Error',error);
+        }
+        return {   getPurchaseShipdate: getPurchaseShipdate    };
+    }
+	
+	function menuPurchase(){
+		switch(filter){
+		case "a":	getPurchaseStatus("PurchOrd:B");// 1:Function that filter by Status
+	    		break;
+		case "b":	getPurchaseId("83342");//2:Function that filter by Id
+				break;
+		case "c":	getPurchaseShipcountry("MX");//3:Function that filter by shipcountry
+				break;
+		case "d":	getPurchaseShipaddress("FBM\nRousseau 14  \nColonia Anzurez\nmexico\nDF Mexico\n11590");//4:Function that filter by shipaddress
+	    		break;
+		case "e":	getPurchaseShipdate("02/07/2021","05/10/2021");//5:Function that filter by shipdate
+	    		break;
+					}
+		}
+});

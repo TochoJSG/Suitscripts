@@ -1,0 +1,4 @@
+<preference type="${type}" defaultAction="">
+    <apply action="">
+    </apply>
+</preference>

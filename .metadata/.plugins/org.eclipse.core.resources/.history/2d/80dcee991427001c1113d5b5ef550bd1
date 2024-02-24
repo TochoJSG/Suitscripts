@@ -1,0 +1,31 @@
+/**
+ * @NApiVersion 2.x
+ */
+define(['N/search'],
+function(n_search) {
+     function getPurchaseStatus(beginP,endP){
+         try{
+             log.debug("FechaIni",beginP);
+             log.debug("FechaFin",endP);
+             var searchContext = n_search.create({
+                 type:'purchaseorder',
+                 filters: [{name:"status", operator:"anyof", values:"PurchOrd:B"}],
+                 columns : [{ name:'trandate'},
+	                        { name:'internalid'}]
+             });
+             var purchaseOrder = [];
+             searchContext.run().each(function (result) {
+            	 log.debug("results",result);
+                 var jsonData = {};
+	                 jsonData.internalid = result.getValue({ name:'internalid'});
+	                 jsonData.tranid = result.getValue({ name:'trandate'});
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+               });
+             return JSON.stringify(purchaseOrder);
+         }catch(error){
+             log.error('Was an Error',error);
+         }
+     }
+    return {   getPurchaseStatus: getPurchaseStatus    };
+});

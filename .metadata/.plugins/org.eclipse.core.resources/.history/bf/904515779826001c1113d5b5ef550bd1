@@ -1,0 +1,49 @@
+/**
+ * @NApiVersion 2.x
+ */
+define(['N/search'],
+function(consult) {
+    /**
+     * @param {Object} context
+     * @param {ServerRequest} context.request - Encapsulation of the incoming request
+     * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
+     * @Since 2015.2
+     */
+    function getPurchaseOrder(beginD,endD){
+    	try{
+            var searchContext = consult.create({
+                type: 'purchaseorder',
+                filters: [ 
+                    { name: 'trandate',operator: 'WITHIN',values: [startDate, endDate]},
+                    {name:"itemtype", operator:"is", values:['InvtPart','Kit']}
+                ],
+                columns : [ 
+                    { name: 'internalid'},
+                    { name: 'tranid' },
+                    { name: 'status' },
+                    { name: 'total' },
+                    { name: 'item' }
+                ]
+            });
+            var th_Purchase = []; 
+            var pagedData = searchContext.runPaged();
+            for( var i=0; i < pagedData.pageRanges.length; i++ ) {
+                pagedData.fetch(i).data.forEach(function (result) {
+                    var PurchaseData = {}; // INITIAL||CLEAR JSON
+                    PurchaseData.internalid = result.getValue({name : 'internalid'});
+                    PurchaseData.tranid = result.getValue({name : 'tranid'});
+                    PurchaseData.status = result.getValue({name : 'status'});
+                    PurchaseData.total = result.getValue({name : 'total'});
+                    PurchaseData.item = result.getValue({name : 'item'});
+                    PurchaseData.itemName = result.getText({name : 'item'});
+                    th_Purchase.push(PurchaseData); 
+                    return true;
+                });
+            }
+            return th_Purchase; 
+        }catch(error){
+            log.error('Error',error);
+        }
+    }
+    return {getPurchaseOrder: getPurchaseOrder};
+});

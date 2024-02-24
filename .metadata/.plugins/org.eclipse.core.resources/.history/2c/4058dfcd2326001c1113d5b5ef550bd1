@@ -1,0 +1,39 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType Suitelet
+ */
+define(['N/search'],
+function(n_search) {
+    /**
+      * @param {Object} context
+      * @param {ServerRequest} context.request 
+      * @param {ServerResponse} context.response 
+      */
+     function getPurchaseStatus(beginP,endP){
+         try{
+             var searchContext = recordPurchase.create({
+                 type:'purchaseorder',
+                 filters: [{ name:'trandate',operator:'WITHIN',values: [beginP, endP]	}],
+                 columns : [{ name:'trandate'},
+	                        { name:'internalid'},
+	                        { name:'item'},
+	                        { name:'tranid' },
+	                        { name:'statusref'},
+	                        { name:'internalid',join:'vendor'}]
+             });
+             var purchaseOrder = [];
+             searchContext.run().each(function (result) {
+                 var jsonData = {};
+	                 jsonData.internalid = result.values.internalid[0].value;
+	                 jsonData.tranid = result.values.tranid;
+	                 jsonData.stauts = result.values.status[0].value;
+	                 purchaseOrder.push(jsonData);
+	                 return true;
+               });
+             return purchaseOrder;
+         }catch(error){
+             log.error('Was an Error',error);
+         }
+     }
+    return {   getPurchaseStatus: getPurchaseStatus    };
+});

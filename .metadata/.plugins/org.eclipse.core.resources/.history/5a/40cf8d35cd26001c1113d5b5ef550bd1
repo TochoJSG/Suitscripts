@@ -1,0 +1,36 @@
+/**
+ @NApiVersion 2.x
+ */
+define([
+    '../Lib/Extends/Search',], 
+function (Search) {
+    /**
+     * @search
+     * @credit_10
+     * @returns {Array<Collection>}
+     */
+    function operationStatuses() {
+        var searchObj = Search.create({
+            type: "customlist_operation_statuses",
+            filters: [
+                ["isinactive", Search.Operator.IS, false]
+            ],
+            columns: [
+                { name: "internalid" },
+                { name: "name" },
+            ]
+        });
+        var collection = [];
+        searchObj.fetchPaged(function (result) {
+            var data = searchObj.fetchColumnValues(result);
+                data.slug = Lo.kebabCase(data.name);
+            
+            /*data.total = result.getValue({name : 'total'});
+            data.item = result.getValue({name : 'item'});
+            data.itemName = result.getText({name : 'item'});*/
+            collection.push(data);
+        });
+        return collection;
+    };
+            return {operationStatuses:operationStatuses};
+        });

@@ -1,0 +1,41 @@
+/**
+ * @NApiVersion 2.x
+ */
+define(['N/search'],
+function(consult) {
+    /**
+     * @param {Object} context
+     * @param {ServerRequest} context.request - Encapsulation of the incoming request
+     * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
+     * @Since 2015.2
+     */
+    function getPurchaseOrder(beginD,endD){
+    	try{
+            var searchContext = consult.create({
+                type: 'purchaseorder',
+                filters: [ 
+                    { name: 'trandate',operator: 'WITHIN',values: [startDate, endDate]}
+                ],
+                columns : [
+                           { name: 'trandate'},
+                           { name: 'internalid'},
+                           { name: 'item'},
+                           { name: 'tranid' },
+                           { name: 'statusref'}]
+            });
+            var th_purchaseOrder = [];
+            searchContext.run().each(function(result) {
+                var jsonData = {};
+                /*jsonData.internalid = result.values.internalid[0].value;
+                jsonData.tranid = result.values.tranid;
+                jsonData.stauts = result.values.status[0].value;*/
+                th_purchaseOrder.push(jsonData);
+                return true;
+              });
+            return th_purchaseOrder; 
+        }catch(error){
+            log.error('Error',error);
+        }
+    }
+    return {getPurchaseOrder: getPurchaseOrder};
+});

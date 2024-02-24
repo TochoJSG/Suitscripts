@@ -1,0 +1,20 @@
+/**
+ * @NApiVersion 2.x
+ * @NModuleScope SameAccount
+ */
+define(['./LibPurJSG'],
+function(purchaseorder) {
+    /**
+     * @param {Object} context
+     * @param {ServerRequest} context.request - Encapsulation of the incoming request
+     * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
+     */
+    function onRequest(context) {
+       var purchaseOrder = JSON.stringify(Purchase.getPurchaseStatus("10/09/2021","05/10/2021"));
+       context.response.write(purchaseOrder); 
+    }
+    return {
+        onRequest: onRequest
+    };  
+});
+

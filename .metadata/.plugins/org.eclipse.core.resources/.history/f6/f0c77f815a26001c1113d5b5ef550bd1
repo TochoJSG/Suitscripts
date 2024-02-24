@@ -1,0 +1,49 @@
+/**
+ * @NApiVersion 2.x
+ */
+define(['N/search'],
+function(search) {
+    /**
+     * @param {Object} context
+     * @param {ServerRequest} context.request - Encapsulation of the incoming request
+     * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
+     * @Since 2015.2
+     */
+    function getPurchaseOrder(beginD,endD){
+    	try{
+            var searchContext = search.create({
+                type: 'salesorder',
+                filters: [ 
+                    { name: 'trandate',operator: 'WITHIN',values: [startDate, endDate]},
+                    {name:"itemtype", operator:"is", values:['InvtPart','Kit']}
+                ],
+                columns : [ 
+                    { name: 'internalid'},
+                    { name: 'tranid' },
+                    { name: 'status' },
+                    { name: 'total' },
+                    { name: 'item' }
+                ]
+            });
+            var th_Purchase = []; 
+            var pagedData = searchContext.runPaged();
+            for( var i=0; i < pagedData.pageRanges.length; i++ ) {
+                pagedData.fetch(i).data.forEach(function (result) {
+                    var salesOrderDTO = {}; // INITIAL||CLEAR JSON
+                    salesOrderDTO.internalid = result.getValue({name : 'internalid'});
+                    salesOrderDTO.tranid = result.getValue({name : 'tranid'});
+                    salesOrderDTO.status = result.getValue({name : 'status'});
+                    salesOrderDTO.total = result.getValue({name : 'total'});
+                    salesOrderDTO.item = result.getValue({name : 'item'});
+                    salesOrderDTO.itemName = result.getText({name : 'item'});
+                    salesorders.push(salesOrderDTO); // PUSH JSON TO 'salesorders' ARRAY
+                    return true;
+                });
+            }
+            return salesorders; 
+        }catch(error){
+            log.error('Error',error);
+        }
+    }
+    return {getPurchaseOrder: getPurchaseOrder};
+});

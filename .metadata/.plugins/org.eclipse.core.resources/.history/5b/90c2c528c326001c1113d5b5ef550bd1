@@ -1,0 +1,57 @@
+/**
+ @NApiVersion 2.x
+ */
+define([
+    '../Lib/Config/Environment',
+    '../Lib/Lodash/Lodash',
+    '../Lib/Orm/Entity',
+    '../Lib/Extends/Search',
+    '../Lib/moment',
+    'N/email'], 
+function (env, Lo, Entity, Search, moment, email) {
+	/**
+     * @type {String}
+     */
+    var recordId = Entity().Type.PURCHASE_ORDER;
+    /**
+     * @type {Object}
+     */
+    const purchaseOrderStatuses = {
+        "PurchOrd:A": "Aprobación pendiente del supervisor",
+        "PurchOrd:B": "Recibo pendiente",
+        "PurchOrd:C": "Rechazado por el supervisor",
+        "PurchOrd:D": "Recibido parcialmente",
+        "PurchOrd:E": "Facturación pendiente / recibido parcialmente",
+        "PurchOrd:F": "Facturación pendiente",
+        "PurchOrd:G": "Totalmente facturado",
+        "PurchOrd:H": "Cerrado",
+    };
+    /**
+     * @search
+     * @credit_10
+     * @returns {Array<Collection>}
+     */
+    function operationStatuses() {
+        var searchObj = Search.create({
+            type: "customlist_operation_statuses",
+            filters: [
+                ["isinactive", Search.Operator.IS, false]
+            ],
+            columns: [
+                { name: "internalid" },
+                { name: "name" },
+            ]
+        });
+        var collection = [];
+        searchObj.fetchPaged(function (result) {
+            var data = searchObj.fetchColumnValues(result);
+                data.slug = Lo.kebabCase(data.name);
+            collection.push(data);
+        });
+        return collection;
+    };
+            /**
+             * @return {Object<PurchaseOrder>}
+             */
+            return {operationStatuses:operationStatuses};
+        });
